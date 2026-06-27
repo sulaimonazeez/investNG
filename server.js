@@ -14,7 +14,7 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 app.use(cors({
   origin: [
-    'http://localhost:3000',
+    'https://tester-rioinvestment.vercel.app',
     'http://localhost:5173',
     process.env.APP_URL,
   ].filter(Boolean),
@@ -41,6 +41,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+
+
 // ── Health ────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
@@ -50,6 +52,8 @@ app.get('/health', (req, res) => {
     app: 'InvestNaija API (Mongoose)',
   });
 });
+
+
 
 // ── Routes ────────────────────────────────────────────────
 app.use('/api', routes);
