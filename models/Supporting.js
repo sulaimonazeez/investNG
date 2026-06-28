@@ -1,5 +1,15 @@
 const mongoose = require('mongoose');
 
+// ─── Bank Account (platform-wide, managed by admin) ───────
+const platformSettingsSchema = new mongoose.Schema({
+  key:   { type: String, required: true, unique: true },
+  value: { type: mongoose.Schema.Types.Mixed, required: true },
+  label: { type: String },
+  group: { type: String, default: 'general' },
+}, { timestamps: true });
+
+platformSettingsSchema.index({ key: 1 });
+
 // ─── Bank Account ─────────────────────────────────────────
 const bankAccountSchema = new mongoose.Schema({
   user:          { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
@@ -44,6 +54,7 @@ const referralCommissionSchema = new mongoose.Schema({
 referralCommissionSchema.index({ referrer: 1, createdAt: -1 });
 
 module.exports = {
+  PlatformSettings:   mongoose.model('PlatformSettings', platformSettingsSchema),
   BankAccount:        mongoose.model('BankAccount', bankAccountSchema),
   Announcement:       mongoose.model('Announcement', announcementSchema),
   DailyProfitLog:     mongoose.model('DailyProfitLog', dailyProfitLogSchema),

@@ -130,3 +130,14 @@ router.post('/admin/announcements',         adminCtrl.createAnnouncement);
 router.delete('/admin/announcements/:id',   adminCtrl.deleteAnnouncement);
 
 module.exports = router;
+
+// ─── SETTINGS ─────────────────────────────────────────────
+const settingsCtrl = require('../controllers/settingsController');
+
+// Public
+router.get('/settings/public', settingsCtrl.getPublicSettings);
+
+// Admin
+router.get('/admin/settings',        authenticate, adminOnly, settingsCtrl.adminGetSettings);
+router.put('/admin/settings',        authenticate, adminOnly, settingsCtrl.adminUpdateSettings);
+router.put('/admin/settings/:key',   authenticate, adminOnly, settingsCtrl.adminUpdateSetting);
