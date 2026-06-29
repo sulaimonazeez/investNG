@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const Transaction = require('../models/Transaction');
 const { generateToken } = require('../utils/jwt');
+const { getSetting } = require('./settingsController');
 const { success, error } = require('../utils/response');
 
 // POST /api/auth/register
@@ -8,7 +10,6 @@ const register = async (req, res) => {
   try {
     const { full_name, username, phone, password, referral_code } = req.body;
 
-    // Uniqueness checks
     const existingUsername = await User.findOne({ username: username.toLowerCase() });
     if (existingUsername) return error(res, 'Username already taken. Choose another.', 409);
 
@@ -22,9 +23,14 @@ const register = async (req, res) => {
       if (referrer) referredBy = referrer._id;
     }
 
+    // Get signup bonus amount from settings
+    const signupBonus = await getSetting('signup_bonus', 500);
+    const bonusAmount = Number(signupBonus) || 0;
+
     const passwordHash = await bcrypt.hash(password, 12);
     const referralCode = await User.generateReferralCode(username);
 
+    // Create user — wallet starts with signup bonus
     const user = await User.create({
       fullName: full_name.trim(),
       username: username.toLowerCase(),
@@ -32,12 +38,30 @@ const register = async (req, res) => {
       passwordHash,
       referralCode,
       referredBy,
+      walletBalance: bonusAmount,
     });
+
+    // Record signup bonus transaction
+    if (bonusAmount > 0) {
+      await Transaction.create({
+        user: user._id,
+        type: 'deposit',
+        amount: bonusAmount,
+        balanceBefore: 0,
+        balanceAfter: bonusAmount,
+        description: `🎁 Welcome bonus — ₦${bonusAmount.toLocaleString()} signup reward`,
+        referenceType: 'SignupBonus',
+      });
+    }
 
     const token = generateToken({ userId: user._id, role: user.role });
 
-    return success(res, { token, user: user.toSafeObject() },
-      'Account created successfully! Welcome to InvestNaija.', 201);
+    return success(res, {
+      token,
+      user: user.toSafeObject(),
+      signupBonus: bonusAmount,
+    }, `🎉 Welcome to InvestNaija! Your ₦${bonusAmount.toLocaleString()} signup bonus has been credited.`, 201);
+
   } catch (err) {
     console.error('Register error:', err);
     if (err.code === 11000) {
@@ -59,8 +83,8 @@ const login = async (req, res) => {
     ).select('+passwordHash');
 
     if (!user) return error(res, 'Invalid credentials. Check your username/phone and password.', 401);
-    if (user.status === 'banned')     return error(res, 'Your account has been permanently banned.', 403);
-    if (user.status === 'suspended')  return error(res, 'Your account is suspended. Contact support.', 403);
+    if (user.status === 'banned')    return error(res, 'Your account has been permanently banned.', 403);
+    if (user.status === 'suspended') return error(res, 'Your account is suspended. Contact support.', 403);
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return error(res, 'Invalid credentials. Check your username/phone and password.', 401);
@@ -81,8 +105,7 @@ const login = async (req, res) => {
 // GET /api/auth/me
 const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-      .populate('referredBy', 'username fullName');
+    const user = await User.findById(req.user._id).populate('referredBy', 'username fullName');
     return success(res, user.toSafeObject());
   } catch (err) {
     return error(res, 'Failed to fetch profile.', 500);
@@ -96,7 +119,6 @@ const changePassword = async (req, res) => {
     const user = await User.findById(req.user._id).select('+passwordHash');
     const isMatch = await user.comparePassword(current_password);
     if (!isMatch) return error(res, 'Current password is incorrect.', 400);
-
     user.passwordHash = await bcrypt.hash(new_password, 12);
     await user.save();
     return success(res, {}, 'Password changed successfully.');
