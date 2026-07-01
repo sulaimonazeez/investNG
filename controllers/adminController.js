@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const InvestmentPlan = require('../models/InvestmentPlan');
@@ -178,25 +179,51 @@ const adminCreatePlan = async (req, res) => {
       sortOrder:       +req.body.sort_order || 99,
     });
     return success(res, plan, 'Plan created.', 201);
-  } catch (err) { return error(res, 'Failed to create plan.', 500); }
+  } catch (err) {
+    return error(res, err.message || 'Failed to create plan.', 500);
+  }
 };
+
+const numericPlanFields = new Set([
+  'price', 'dailyProfit', 'totalProfit', 'durationDays',
+  'dailyRoiPercent', 'totalRoiPercent', 'minPurchase', 'maxPurchase', 'sortOrder',
+]);
 
 const adminUpdatePlan = async (req, res) => {
   try {
+    if (!req.params.id || !mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return error(res, 'Invalid or missing plan id.', 400);
+    }
+
     const updates = {};
     const map = {
       name: 'name', description: 'description', price: 'price',
       daily_profit: 'dailyProfit', total_profit: 'totalProfit',
       duration_days: 'durationDays', daily_roi_percent: 'dailyRoiPercent',
       total_roi_percent: 'totalRoiPercent', is_active: 'isActive',
-      max_purchase: 'maxPurchase', sort_order: 'sortOrder',
+      min_purchase: 'minPurchase', max_purchase: 'maxPurchase', sort_order: 'sortOrder',
     };
     for (const [k, v] of Object.entries(map)) {
-      if (req.body[k] !== undefined) updates[v] = req.body[k];
+      if (req.body[k] !== undefined && req.body[k] !== '') {
+        let val = req.body[k];
+        if (numericPlanFields.has(v)) val = +val;
+        if (v === 'isActive') val = !!(+val);
+        updates[v] = val;
+      }
     }
-    const plan = await InvestmentPlan.findByIdAndUpdate(req.params.id, updates, { new: true });
+
+    if (Object.keys(updates).length === 0) {
+      return error(res, 'No valid fields to update.', 400);
+    }
+
+    const plan = await InvestmentPlan.findByIdAndUpdate(
+      req.params.id, updates, { new: true, runValidators: true }
+    );
+    if (!plan) return error(res, 'Plan not found.', 404);
     return success(res, plan, 'Plan updated.');
-  } catch (err) { return error(res, 'Failed to update plan.', 500); }
+  } catch (err) {
+    return error(res, err.message || 'Failed to update plan.', 500);
+  }
 };
 
 const adminDeletePlan = async (req, res) => {
