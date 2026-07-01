@@ -18,4 +18,24 @@ const investmentPlanSchema = new mongoose.Schema({
 
 investmentPlanSchema.index({ isActive: 1, sortOrder: 1 });
 
+investmentPlanSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    ret.daily_profit = ret.dailyProfit;
+    ret.total_profit = ret.totalProfit;
+    ret.duration_days = ret.durationDays;
+    ret.daily_roi_percent = ret.dailyRoiPercent;
+    ret.total_roi_percent = ret.totalRoiPercent;
+    ret.min_purchase = ret.minPurchase;
+    ret.max_purchase = ret.maxPurchase;
+    ret.is_active = ret.isActive;
+    ret.sort_order = ret.sortOrder;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
 module.exports = mongoose.model('InvestmentPlan', investmentPlanSchema);
+
