@@ -20,6 +20,21 @@ const bankAccountSchema = new mongoose.Schema({
 
 bankAccountSchema.index({ user: 1 });
 
+bankAccountSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    ret.bank_name = ret.bankName;
+    ret.account_number = ret.accountNumber;
+    ret.account_name = ret.accountName;
+    ret.created_at = ret.createdAt;
+    ret.updated_at = ret.updatedAt;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
 // ─── Announcement ─────────────────────────────────────────
 const announcementSchema = new mongoose.Schema({
   title:     { type: String, required: true },
