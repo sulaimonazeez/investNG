@@ -25,7 +25,28 @@ userInvestmentSchema.virtual('progressPercent').get(function () {
   return Math.min(100, Math.round((this.daysCompleted / this.durationDays) * 100));
 });
 
-userInvestmentSchema.set('toJSON', { virtuals: true });
+userInvestmentSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    ret.plan_name = ret.planName;
+    ret.amount_invested = ret.amountInvested;
+    ret.daily_profit = ret.dailyProfit;
+    ret.total_profit = ret.totalProfit;
+    ret.profit_earned = ret.profitEarned;
+    ret.duration_days = ret.durationDays;
+    ret.days_completed = ret.daysCompleted;
+    ret.start_date = ret.startDate;
+    ret.end_date = ret.endDate;
+    ret.last_profit_date = ret.lastProfitDate;
+    ret.progress_percent = ret.progressPercent;
+    ret.created_at = ret.createdAt;
+    ret.updated_at = ret.updatedAt;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
 userInvestmentSchema.set('toObject', { virtuals: true });
 
 module.exports = mongoose.model('UserInvestment', userInvestmentSchema);
