@@ -108,13 +108,53 @@ const adminDashboard = async (req, res) => {
         .sort({ createdAt: -1 }).limit(5),
     ]);
 
+    const depositRow = depositStats[0] || {};
+    const withdrawalRow = withdrawalStats[0] || {};
+    const investmentRow = investmentStats[0] || {};
+
     return success(res, {
-      users: { totalUsers, activeUsers, newToday, newThisWeek },
-      deposits: depositStats[0] || {},
-      withdrawals: withdrawalStats[0] || {},
-      investments: { ...(investmentStats[0] || {}), totalProfitPaid: profitPaid[0]?.total || 0 },
-      charts: { dailySignups, dailyDeposits },
-      pending: { deposits: pendingDeposits, withdrawals: pendingWithdrawals },
+      users: {
+        total_users: totalUsers,
+        active_users: activeUsers,
+        new_today: newToday,
+        new_this_week: newThisWeek,
+      },
+      deposits: {
+        total_deposits: depositRow.total || 0,
+        pending_deposits: depositRow.pending || 0,
+        total_approved_amount: depositRow.approvedAmount || 0,
+        pending_amount: depositRow.pendingAmount || 0,
+      },
+      withdrawals: {
+        total_withdrawals: withdrawalRow.total || 0,
+        pending_withdrawals: withdrawalRow.pending || 0,
+        total_paid_out: withdrawalRow.paidOut || 0,
+        pending_amount: withdrawalRow.pendingAmount || 0,
+      },
+      investments: {
+        total_investments: investmentRow.total || 0,
+        active_investments: investmentRow.active || 0,
+        total_invested: investmentRow.totalInvested || 0,
+        total_profit_paid: profitPaid[0]?.total || 0,
+      },
+      charts: {
+        daily_signups: dailySignups,
+        daily_deposits: dailyDeposits,
+      },
+      pending: {
+        deposits: pendingDeposits.map(dep => {
+          const obj = dep.toJSON();
+          obj.full_name = dep.user?.fullName || null;
+          obj.username = dep.user?.username || null;
+          return obj;
+        }),
+        withdrawals: pendingWithdrawals.map(w => {
+          const obj = w.toJSON();
+          obj.full_name = w.user?.fullName || null;
+          obj.username = w.user?.username || null;
+          return obj;
+        }),
+      },
     });
   } catch (err) {
     console.error('Admin dashboard error:', err);
@@ -148,8 +188,12 @@ const adminGetUsers = async (req, res) => {
 const adminUpdateUserStatus = async (req, res) => {
   try {
     const { status } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return error(res, 'Invalid user id.', 400);
+    }
     if (!['active', 'suspended', 'banned'].includes(status)) return error(res, 'Invalid status.', 400);
-    await User.findOneAndUpdate({ _id: req.params.id, role: 'user' }, { status });
+    const user = await User.findOneAndUpdate({ _id: req.params.id, role: 'user' }, { status });
+    if (!user) return error(res, 'User not found.', 404);
     return success(res, {}, `User ${status} successfully.`);
   } catch (err) {
     return error(res, 'Failed to update user.', 500);
