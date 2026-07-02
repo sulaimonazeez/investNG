@@ -48,6 +48,29 @@ userSchema.index({ referralCode: 1 });
 userSchema.index({ referredBy: 1 });
 userSchema.index({ createdAt: -1 });
 
+userSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    ret.full_name = ret.fullName;
+    ret.avatar_url = ret.avatarUrl;
+    ret.referral_code = ret.referralCode;
+    ret.referred_by = ret.referredBy;
+    ret.wallet_balance = ret.walletBalance;
+    ret.total_earned = ret.totalEarned;
+    ret.total_withdrawn = ret.totalWithdrawn;
+    ret.total_deposited = ret.totalDeposited;
+    ret.referral_earnings = ret.referralEarnings;
+    ret.last_login_at = ret.lastLoginAt;
+    ret.created_at = ret.createdAt;
+    ret.updated_at = ret.updatedAt;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.passwordHash;
+    return ret;
+  },
+});
+
 // Instance methods
 userSchema.methods.comparePassword = async function (password) {
   return bcrypt.compare(password, this.passwordHash);
