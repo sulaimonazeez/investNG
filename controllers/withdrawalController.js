@@ -90,7 +90,16 @@ const adminGetWithdrawals = async (req, res) => {
         .skip((page - 1) * limit)
         .limit(+limit),
     ]);
-    return paginate(res, withdrawals, total, page, limit);
+
+    const flattened = withdrawals.map(w => {
+      const obj = w.toJSON();
+      obj.full_name = w.user?.fullName || null;
+      obj.username = w.user?.username || null;
+      obj.phone = w.user?.phone || null;
+      return obj;
+    });
+
+    return paginate(res, flattened, total, page, limit);
   } catch (err) {
     return error(res, 'Failed to fetch withdrawals.', 500);
   }
