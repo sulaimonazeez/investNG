@@ -21,11 +21,14 @@ const getReferralStats = async (req, res) => {
           Deposit.exists({ user: ru._id, status: 'approved' }),
           UserInvestment.exists({ user: ru._id, status: { $in: ['active', 'completed'] } }),
         ]);
-        return { ...ru.toObject(), hasDeposited: !!hasDeposit, hasInvested: !!hasInvestment };
+        const obj = ru.toJSON();
+        obj.has_deposited = !!hasDeposit;
+        obj.has_invested = !!hasInvestment;
+        return obj;
       })
     );
 
-    const validCount = validChecks.filter(u => u.hasDeposited && u.hasInvested).length;
+    const validCount = validChecks.filter(u => u.has_deposited && u.has_invested).length;
 
     const commissions = await ReferralCommission.find({ referrer: userId })
       .populate('referred', 'fullName username')
@@ -35,13 +38,13 @@ const getReferralStats = async (req, res) => {
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
     return success(res, {
-      referralCode:    user.referralCode,
-      referralLink:    `${appUrl}/register?ref=${user.referralCode}`,
-      totalReferrals:  referredUsers.length,
-      validReferrals:  validCount,
-      referralEarnings: user.referralEarnings,
-      referredUsers:   validChecks,
-      commissionHistory: commissions,
+      referral_code:      user.referralCode,
+      referral_link:      `${appUrl}/register?ref=${user.referralCode}`,
+      total_referrals:    referredUsers.length,
+      valid_referrals:    validCount,
+      referral_earnings:  user.referralEarnings,
+      referred_users:     validChecks,
+      commission_history: commissions,
     });
   } catch (err) {
     console.error('Referral stats error:', err);
