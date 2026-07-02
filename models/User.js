@@ -77,7 +77,7 @@ userSchema.methods.comparePassword = async function (password) {
 };
 
 userSchema.methods.toSafeObject = function () {
-  const obj = this.toObject();
+  const obj = this.toJSON();
   delete obj.passwordHash;
   return obj;
 };
